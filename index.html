@@ -352,6 +352,7 @@
         // Current time values
         let hours = 10;
         let minutes = 10;
+        let prevMinutes = 10; // Track previous minutes to detect hour crossing
 
         // DOM elements
         const clockFace = document.getElementById('clock-face');
@@ -468,7 +469,20 @@
 
                 if (activeHand === minuteHand) {
                     // Snap to whole minutes
-                    minutes = Math.round(angle / 6) % 60;
+                    const newMinutes = Math.round(angle / 6) % 60;
+                    
+                    // Detect crossing the 12 o'clock position
+                    // Forward: going from high minutes (45-59) to low minutes (0-14)
+                    if (prevMinutes >= 45 && newMinutes <= 14) {
+                        hours = (hours + 1) % 24;
+                    }
+                    // Backward: going from low minutes (0-14) to high minutes (45-59)
+                    else if (prevMinutes <= 14 && newMinutes >= 45) {
+                        hours = (hours - 1 + 24) % 24;
+                    }
+                    
+                    prevMinutes = newMinutes;
+                    minutes = newMinutes;
                 } else if (activeHand === hourHand) {
                     // Calculate hour from angle, considering 12-hour display
                     const rawHour = angle / 30;
