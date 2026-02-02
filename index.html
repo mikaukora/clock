@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Learn the Clock - Interactive Clock Learning Tool</title>
+    <meta name="description" content="Learn to read analog clocks with this interactive tool. Drag the hands and see the digital time update instantly.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕐</text></svg>">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0a1628 0%, #1a3a5c 100%);
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            padding-top: env(safe-area-inset-top, 12px);
+            padding-bottom: env(safe-area-inset-bottom, 12px);
+            color: #fff;
+            overflow: hidden;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            margin-bottom: clamp(12px, 3vh, 30px);
+            text-align: center;
+            color: #7eb8da;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: clamp(16px, 4vh, 40px);
+            width: 100%;
+            max-width: 400px;
+            align-items: center;
+        }
+
+        .clock-section {
+            background: rgba(0, 20, 40, 0.5);
+            border-radius: 20px;
+            padding: clamp(20px, 4vh, 30px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(100, 180, 255, 0.1);
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .section-label {
+            font-size: 0.9rem;
+            color: #4ecdc4;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        /* Analog Clock */
+        .analog-clock {
+            position: relative;
+            width: clamp(200px, 60vw, 280px);
+            height: clamp(200px, 60vw, 280px);
+        }
+
+        .clock-face {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #1a3a5c 0%, #0a1628 100%);
+            border: 3px solid rgba(78, 205, 196, 0.3);
+            box-shadow: 
+                0 0 30px rgba(78, 205, 196, 0.1),
+                inset 0 0 30px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .clock-face::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 12px;
+            height: 12px;
+            background: #4ecdc4;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #4ecdc4;
+            z-index: 10;
+        }
+
+        .hour-marker {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-origin: center center;
+            color: #7eb8da;
+            font-weight: 500;
+            font-size: clamp(14px, 4vw, 18px);
+        }
+
+        .hour-marker.major {
+            color: #4ecdc4;
+            font-weight: 600;
+            font-size: clamp(16px, 4.5vw, 20px);
+        }
+
+        .tick {
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform-origin: center calc(50% - 8px + clamp(100px, 30vw, 140px));
+            width: 2px;
+            height: 8px;
+            background: rgba(78, 205, 196, 0.3);
+            transform: translateX(-50%);
+        }
+
+        .tick.major {
+            height: 12px;
+            width: 3px;
+            background: rgba(78, 205, 196, 0.6);
+        }
+
+        /* Clock Hands */
+        .hand {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            transform-origin: bottom center;
+            border-radius: 4px;
+            cursor: grab;
+            transition: filter 0.2s;
+        }
+
+        .hand:hover {
+            filter: brightness(1.3);
+        }
+
+        .hand.dragging {
+            cursor: grabbing;
+            filter: brightness(1.5);
+        }
+
+        .hour-hand {
+            width: 6px;
+            height: 28%;
+            background: linear-gradient(to top, #4ecdc4, #7ee8e0);
+            box-shadow: 0 0 15px rgba(78, 205, 196, 0.6);
+            margin-left: -3px;
+            z-index: 3;
+        }
+
+        .minute-hand {
+            width: 4px;
+            height: 38%;
+            background: linear-gradient(to top, #ff6b6b, #ffa8a8);
+            box-shadow: 0 0 15px rgba(255, 107, 107, 0.6);
+            margin-left: -2px;
+            z-index: 4;
+        }
+
+        .hint {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #5a7a9a;
+            margin-top: 12px;
+        }
+
+        .hint span {
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        /* Digital Display */
+        .digital-display {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .digit {
+            position: relative;
+            width: clamp(32px, 10vw, 45px);
+            height: clamp(56px, 16vw, 75px);
+        }
+
+        .segment {
+            position: absolute;
+            background: #0a192f;
+            transition: background 0.1s, box-shadow 0.1s;
+        }
+
+        .segment.h {
+            width: 70%;
+            height: 8%;
+            left: 15%;
+            clip-path: polygon(10% 0, 90% 0, 100% 50%, 90% 100%, 10% 100%, 0 50%);
+        }
+
+        .segment.v {
+            width: 15%;
+            height: 38%;
+            clip-path: polygon(50% 0, 100% 8%, 100% 92%, 50% 100%, 0 92%, 0 8%);
+        }
+
+        .segment.a { top: 0; }
+        .segment.b { top: 6%; right: 0; }
+        .segment.c { top: 52%; right: 0; }
+        .segment.d { bottom: 0; }
+        .segment.e { top: 52%; left: 0; }
+        .segment.f { top: 6%; left: 0; }
+        .segment.g { top: 46%; }
+
+        .segment.on {
+            background: #4ecdc4;
+            box-shadow: 0 0 10px #4ecdc4, 0 0 20px rgba(78, 205, 196, 0.5);
+        }
+
+        .colon {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: clamp(12px, 4vw, 18px);
+            height: clamp(56px, 16vw, 75px);
+            margin: 0 4px;
+        }
+
+        .colon-dot {
+            width: clamp(6px, 2vw, 10px);
+            height: clamp(6px, 2vw, 10px);
+            background: #4ecdc4;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #4ecdc4, 0 0 20px rgba(78, 205, 196, 0.5);
+        }
+
+        /* Hand labels */
+        .hand-legend {
+            display: flex;
+            gap: 24px;
+            margin-top: 8px;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #7eb8da;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 6px;
+            border-radius: 3px;
+        }
+
+        .legend-color.hour {
+            background: #4ecdc4;
+            box-shadow: 0 0 8px rgba(78, 205, 196, 0.6);
+        }
+
+        .legend-color.minute {
+            background: #ff6b6b;
+            box-shadow: 0 0 8px rgba(255, 107, 107, 0.6);
+        }
+
+        @media (max-width: 360px) {
+            .digit {
+                width: 28px;
+                height: 48px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Learn the Clock</h1>
+    
+    <div class="container">
+        <div class="clock-section">
+            <div class="section-label">Analog</div>
+            <div class="analog-clock">
+                <div class="clock-face" id="clock-face">
+                    <!-- Hour markers and ticks will be added by JS -->
+                    <div class="hand hour-hand" id="hour-hand"></div>
+                    <div class="hand minute-hand" id="minute-hand"></div>
+                </div>
+            </div>
+            <div class="hand-legend">
+                <div class="legend-item">
+                    <div class="legend-color hour"></div>
+                    <span>Hour</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color minute"></div>
+                    <span>Minute</span>
+                </div>
+            </div>
+            <div class="hint"><span>↻</span> Drag the hands to change time</div>
+        </div>
+
+        <div class="clock-section">
+            <div class="section-label">Digital (24h)</div>
+            <div class="digital-display" id="digital-display">
+                <div class="digit" data-position="0"></div>
+                <div class="digit" data-position="1"></div>
+                <div class="colon">
+                    <div class="colon-dot"></div>
+                    <div class="colon-dot"></div>
+                </div>
+                <div class="digit" data-position="2"></div>
+                <div class="digit" data-position="3"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Segment patterns for digits 0-9
+        const SEGMENT_PATTERNS = {
+            0: ['a', 'b', 'c', 'd', 'e', 'f'],
+            1: ['b', 'c'],
+            2: ['a', 'b', 'd', 'e', 'g'],
+            3: ['a', 'b', 'c', 'd', 'g'],
+            4: ['b', 'c', 'f', 'g'],
+            5: ['a', 'c', 'd', 'f', 'g'],
+            6: ['a', 'c', 'd', 'e', 'f', 'g'],
+            7: ['a', 'b', 'c'],
+            8: ['a', 'b', 'c', 'd', 'e', 'f', 'g'],
+            9: ['a', 'b', 'c', 'd', 'f', 'g']
+        };
+
+        // Current time values
+        let hours = 10;
+        let minutes = 10;
+
+        // DOM elements
+        const clockFace = document.getElementById('clock-face');
+        const hourHand = document.getElementById('hour-hand');
+        const minuteHand = document.getElementById('minute-hand');
+
+        // Initialize clock face with hour markers and ticks
+        function initClockFace() {
+            const radius = 42; // percentage from center
+
+            // Add hour numbers
+            for (let i = 1; i <= 12; i++) {
+                const angle = (i * 30 - 90) * (Math.PI / 180);
+                const x = 50 + radius * Math.cos(angle);
+                const y = 50 + radius * Math.sin(angle);
+
+                const marker = document.createElement('div');
+                marker.className = `hour-marker ${i % 3 === 0 ? 'major' : ''}`;
+                marker.textContent = i;
+                marker.style.left = `${x}%`;
+                marker.style.top = `${y}%`;
+                marker.style.transform = 'translate(-50%, -50%)';
+                clockFace.appendChild(marker);
+            }
+
+            // Add minute ticks
+            for (let i = 0; i < 60; i++) {
+                if (i % 5 === 0) continue; // Skip where hour markers are
+                const tick = document.createElement('div');
+                tick.className = 'tick';
+                tick.style.transform = `translateX(-50%) rotate(${i * 6}deg)`;
+                clockFace.appendChild(tick);
+            }
+
+            // Add major ticks at hour positions
+            for (let i = 0; i < 12; i++) {
+                const tick = document.createElement('div');
+                tick.className = 'tick major';
+                tick.style.transform = `translateX(-50%) rotate(${i * 30}deg)`;
+                clockFace.appendChild(tick);
+            }
+        }
+
+        // Initialize 7-segment digits
+        function initDigit(digitEl) {
+            const segments = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+            segments.forEach(seg => {
+                const segEl = document.createElement('div');
+                segEl.className = `segment ${seg} ${seg === 'a' || seg === 'd' || seg === 'g' ? 'h' : 'v'}`;
+                segEl.dataset.segment = seg;
+                digitEl.appendChild(segEl);
+            });
+        }
+
+        function setDigit(digitEl, number) {
+            const pattern = SEGMENT_PATTERNS[number] || [];
+            const segments = digitEl.querySelectorAll('.segment');
+            segments.forEach(seg => {
+                const segName = seg.dataset.segment;
+                if (pattern.includes(segName)) {
+                    seg.classList.add('on');
+                } else {
+                    seg.classList.remove('on');
+                }
+            });
+        }
+
+        // Update all displays
+        function updateDisplay() {
+            // Update analog clock hands
+            const hourAngle = (hours % 12) * 30 + minutes * 0.5;
+            const minuteAngle = minutes * 6;
+
+            hourHand.style.transform = `translateX(-50%) rotate(${hourAngle}deg)`;
+            minuteHand.style.transform = `translateX(-50%) rotate(${minuteAngle}deg)`;
+
+            // Update digital display
+            const digits = document.querySelectorAll('#digital-display .digit');
+            const timeStr = String(hours).padStart(2, '0') + String(minutes).padStart(2, '0');
+            digits.forEach((digit, i) => {
+                setDigit(digit, parseInt(timeStr[i]));
+            });
+        }
+
+        // Get angle from center of clock face to a point
+        function getAngleFromCenter(clientX, clientY) {
+            const rect = clockFace.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+
+            const dx = clientX - centerX;
+            const dy = clientY - centerY;
+
+            let angle = Math.atan2(dy, dx) * (180 / Math.PI) + 90;
+            if (angle < 0) angle += 360;
+
+            return angle;
+        }
+
+        // Dragging functionality
+        let activeHand = null;
+
+        function startDrag(e, hand) {
+            e.preventDefault();
+            activeHand = hand;
+            hand.classList.add('dragging');
+
+            const moveHandler = (e) => {
+                if (!activeHand) return;
+
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                const angle = getAngleFromCenter(clientX, clientY);
+
+                if (activeHand === minuteHand) {
+                    // Snap to whole minutes
+                    minutes = Math.round(angle / 6) % 60;
+                } else if (activeHand === hourHand) {
+                    // Calculate hour from angle, considering 12-hour display
+                    const rawHour = angle / 30;
+                    const newHour = Math.round(rawHour) % 12;
+                    
+                    // Preserve AM/PM
+                    if (hours >= 12) {
+                        hours = newHour === 0 ? 12 : newHour + 12;
+                    } else {
+                        hours = newHour === 0 ? 0 : newHour;
+                    }
+                }
+
+                updateDisplay();
+            };
+
+            const endDrag = () => {
+                if (activeHand) {
+                    activeHand.classList.remove('dragging');
+                    activeHand = null;
+                }
+                document.removeEventListener('mousemove', moveHandler);
+                document.removeEventListener('mouseup', endDrag);
+                document.removeEventListener('touchmove', moveHandler);
+                document.removeEventListener('touchend', endDrag);
+            };
+
+            document.addEventListener('mousemove', moveHandler);
+            document.addEventListener('mouseup', endDrag);
+            document.addEventListener('touchmove', moveHandler, { passive: false });
+            document.addEventListener('touchend', endDrag);
+        }
+
+        // Double-click to toggle AM/PM
+        hourHand.addEventListener('dblclick', () => {
+            hours = (hours + 12) % 24;
+            updateDisplay();
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initClockFace();
+
+            document.querySelectorAll('.digit').forEach(initDigit);
+
+            // Set up drag handlers
+            hourHand.addEventListener('mousedown', (e) => startDrag(e, hourHand));
+            hourHand.addEventListener('touchstart', (e) => startDrag(e, hourHand), { passive: false });
+
+            minuteHand.addEventListener('mousedown', (e) => startDrag(e, minuteHand));
+            minuteHand.addEventListener('touchstart', (e) => startDrag(e, minuteHand), { passive: false });
+
+            updateDisplay();
+        });
+    </script>
+</body>
+</html>
