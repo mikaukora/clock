@@ -119,13 +119,13 @@
 
         .tick {
             position: absolute;
-            top: 8px;
+            top: 50%;
             left: 50%;
-            transform-origin: center calc(50% - 8px + clamp(100px, 30vw, 140px));
+            transform-origin: 50% 100%;
             width: 2px;
             height: 8px;
             background: rgba(78, 205, 196, 0.3);
-            transform: translateX(-50%);
+            transform: translate(-50%, -100%);
         }
 
         .tick.major {
@@ -137,9 +137,9 @@
         /* Clock Hands */
         .hand {
             position: absolute;
-            bottom: 50%;
+            top: 50%;
             left: 50%;
-            transform-origin: bottom center;
+            transform-origin: 50% 100%;
             border-radius: 4px;
             cursor: grab;
             transition: filter 0.2s;
@@ -159,7 +159,6 @@
             height: 28%;
             background: linear-gradient(to top, #4ecdc4, #7ee8e0);
             box-shadow: 0 0 15px rgba(78, 205, 196, 0.6);
-            margin-left: -3px;
             z-index: 3;
         }
 
@@ -168,7 +167,6 @@
             height: 38%;
             background: linear-gradient(to top, #ff6b6b, #ffa8a8);
             box-shadow: 0 0 15px rgba(255, 107, 107, 0.6);
-            margin-left: -2px;
             z-index: 4;
         }
 
@@ -408,7 +406,7 @@
                 if (i % 5 === 0) continue; // Skip where hour markers are
                 const tick = document.createElement('div');
                 tick.className = 'tick';
-                tick.style.transform = `translateX(-50%) rotate(${i * 6}deg)`;
+                tick.style.transform = `translate(-50%, -100%) rotate(${i * 6}deg)`;
                 clockFace.appendChild(tick);
             }
 
@@ -416,7 +414,7 @@
             for (let i = 0; i < 12; i++) {
                 const tick = document.createElement('div');
                 tick.className = 'tick major';
-                tick.style.transform = `translateX(-50%) rotate(${i * 30}deg)`;
+                tick.style.transform = `translate(-50%, -100%) rotate(${i * 30}deg)`;
                 clockFace.appendChild(tick);
             }
         }
@@ -451,8 +449,8 @@
             const hourAngle = (hours % 12) * 30 + minutes * 0.5;
             const minuteAngle = minutes * 6;
 
-            hourHand.style.transform = `translateX(-50%) rotate(${hourAngle}deg)`;
-            minuteHand.style.transform = `translateX(-50%) rotate(${minuteAngle}deg)`;
+            hourHand.style.transform = `translate(-50%, -100%) rotate(${hourAngle}deg)`;
+            minuteHand.style.transform = `translate(-50%, -100%) rotate(${minuteAngle}deg)`;
 
             // Update digital display
             const digits = document.querySelectorAll('#digital-display .digit');
