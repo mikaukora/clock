@@ -376,6 +376,7 @@
         let hours = 10;
         let minutes = 10;
         let prevMinutes = 10; // Track previous minutes to detect hour crossing
+        let prevHourPos = hours % 12; // Track previous hour position (0-11) to detect AM/PM crossing
 
         // DOM elements
         const clockFace = document.getElementById('clock-face');
@@ -482,6 +483,17 @@
             e.preventDefault();
             activeHand = hand;
             hand.classList.add('dragging');
+            
+            // Track which half of the day we're in (0 = hours 0-11, 1 = hours 12-23)
+            // This is local to each drag session
+            let dayHalf = Math.floor(hours / 12);
+            
+            // Initialize previous position tracking when drag starts
+            if (hand === hourHand) {
+                prevHourPos = hours % 12;
+            } else if (hand === minuteHand) {
+                prevMinutes = minutes;
+            }
 
             const moveHandler = (e) => {
                 if (!activeHand) return;
@@ -507,16 +519,23 @@
                     prevMinutes = newMinutes;
                     minutes = newMinutes;
                 } else if (activeHand === hourHand) {
-                    // Calculate hour from angle, considering 12-hour display
+                    // Calculate hour position from angle (0-11, where 0 is 12 o'clock position)
                     const rawHour = angle / 30;
-                    const newHour = Math.round(rawHour) % 12;
+                    const newHourPos = Math.round(rawHour) % 12;
                     
-                    // Preserve AM/PM
-                    if (hours >= 12) {
-                        hours = newHour === 0 ? 12 : newHour + 12;
-                    } else {
-                        hours = newHour === 0 ? 0 : newHour;
+                    // Detect crossing the 12 o'clock boundary (position 0)
+                    // Crossing happens when moving between positions 9-11 and positions 0-2
+                    const crossedBoundary = (prevHourPos >= 9 && newHourPos <= 2) || 
+                                            (prevHourPos <= 2 && newHourPos >= 9);
+                    
+                    if (crossedBoundary) {
+                        dayHalf = (dayHalf + 1) % 2;
                     }
+                    
+                    // Calculate the 24-hour value
+                    hours = dayHalf * 12 + newHourPos;
+                    
+                    prevHourPos = newHourPos;
                 }
 
                 updateDisplay();
