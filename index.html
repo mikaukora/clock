@@ -197,6 +197,26 @@
             gap: 4px;
         }
 
+        .digit-group {
+            display: flex;
+            gap: 4px;
+            padding: 8px 12px;
+            border-radius: 10px;
+            cursor: ns-resize;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: background 0.2s;
+        }
+
+        .digit-group:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .digit-group.active {
+            background: rgba(78, 205, 196, 0.1);
+        }
+
         .digit {
             position: relative;
             width: clamp(32px, 10vw, 45px);
@@ -322,15 +342,20 @@
         <div class="clock-section">
             <div class="section-label">Digital (24h)</div>
             <div class="digital-display" id="digital-display">
-                <div class="digit" data-position="0"></div>
-                <div class="digit" data-position="1"></div>
+                <div class="digit-group" id="hours-group" data-unit="hours">
+                    <div class="digit" data-position="0"></div>
+                    <div class="digit" data-position="1"></div>
+                </div>
                 <div class="colon">
                     <div class="colon-dot"></div>
                     <div class="colon-dot"></div>
                 </div>
-                <div class="digit" data-position="2"></div>
-                <div class="digit" data-position="3"></div>
+                <div class="digit-group" id="minutes-group" data-unit="minutes">
+                    <div class="digit" data-position="2"></div>
+                    <div class="digit" data-position="3"></div>
+                </div>
             </div>
+            <div class="hint"><span>↕</span> Drag to adjust</div>
         </div>
     </div>
 
@@ -522,18 +547,103 @@
             updateDisplay();
         });
 
+        // Digital display drag handling
+        function setupDigitalDrag(groupEl) {
+            let startY = 0;
+            let startValue = 0;
+            let isDragging = false;
+            const unit = groupEl.dataset.unit;
+
+            const handleStart = (e) => {
+                e.preventDefault();
+                isDragging = true;
+                groupEl.classList.add('active');
+                startY = e.touches ? e.touches[0].clientY : e.clientY;
+                startValue = unit === 'hours' ? hours : minutes;
+            };
+
+            const handleMove = (e) => {
+                if (!isDragging) return;
+                e.preventDefault();
+                const currentY = e.touches ? e.touches[0].clientY : e.clientY;
+                const deltaY = startY - currentY;
+                const sensitivity = unit === 'hours' ? 0.1 : 0.3;
+
+                if (unit === 'hours') {
+                    hours = Math.floor(startValue + deltaY * sensitivity);
+                    // Wrap around 0-23
+                    hours = ((hours % 24) + 24) % 24;
+                } else {
+                    const newMinutes = Math.floor(startValue + deltaY * sensitivity);
+                    // Wrap around 0-59
+                    minutes = ((newMinutes % 60) + 60) % 60;
+                    prevMinutes = minutes;
+                }
+
+                updateDisplay();
+            };
+
+            const handleEnd = () => {
+                isDragging = false;
+                groupEl.classList.remove('active');
+            };
+
+            // Touch events
+            groupEl.addEventListener('touchstart', handleStart, { passive: false });
+            groupEl.addEventListener('touchmove', handleMove, { passive: false });
+            groupEl.addEventListener('touchend', handleEnd);
+            groupEl.addEventListener('touchcancel', handleEnd);
+
+            // Mouse events
+            groupEl.addEventListener('mousedown', handleStart);
+            
+            const docMoveHandler = (e) => {
+                if (isDragging && groupEl.classList.contains('active')) {
+                    handleMove(e);
+                }
+            };
+            
+            const docEndHandler = () => {
+                if (isDragging && groupEl.classList.contains('active')) {
+                    handleEnd();
+                }
+            };
+            
+            document.addEventListener('mousemove', docMoveHandler);
+            document.addEventListener('mouseup', docEndHandler);
+
+            // Mouse wheel support
+            groupEl.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -1 : 1;
+
+                if (unit === 'hours') {
+                    hours = ((hours + delta) % 24 + 24) % 24;
+                } else {
+                    minutes = ((minutes + delta) % 60 + 60) % 60;
+                    prevMinutes = minutes;
+                }
+
+                updateDisplay();
+            }, { passive: false });
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             initClockFace();
 
             document.querySelectorAll('.digit').forEach(initDigit);
 
-            // Set up drag handlers
+            // Set up analog clock drag handlers
             hourHand.addEventListener('mousedown', (e) => startDrag(e, hourHand));
             hourHand.addEventListener('touchstart', (e) => startDrag(e, hourHand), { passive: false });
 
             minuteHand.addEventListener('mousedown', (e) => startDrag(e, minuteHand));
             minuteHand.addEventListener('touchstart', (e) => startDrag(e, minuteHand), { passive: false });
+
+            // Set up digital display drag handlers
+            setupDigitalDrag(document.getElementById('hours-group'));
+            setupDigitalDrag(document.getElementById('minutes-group'));
 
             updateDisplay();
         });
