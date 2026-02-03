@@ -2,6 +2,8 @@
 
 Interactive clock learning tool to practice reading analog and digital time.
 
+<img src="screenshot.png" width="300" alt="Screenshot">
+
 ## Features
 
 - **Analog clock** — Drag the hour or minute hand to set the time; hands and minute markers share the same center for clear alignment.
